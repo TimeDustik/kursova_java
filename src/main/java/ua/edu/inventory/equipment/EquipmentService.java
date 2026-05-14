@@ -13,6 +13,7 @@ import ua.edu.inventory.audit.AuditAction;
 import ua.edu.inventory.audit.EntityChangedEvent;
 import ua.edu.inventory.auth.UserPrincipal;
 import ua.edu.inventory.common.EntityType;
+import ua.edu.inventory.notification.NotificationProducer;
 import ua.edu.inventory.common.SecurityUtils;
 import ua.edu.inventory.common.exception.BusinessRuleException;
 import ua.edu.inventory.common.exception.ConflictException;
@@ -43,6 +44,7 @@ public class EquipmentService {
     private final UserRepository userRepository;
     private final EquipmentMapper equipmentMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationProducer notificationProducer;
 
     /** WORKER бачить тільки своє. TEAM_LEAD — своє Site. ADMIN/AUDITOR — все. */
     @PreAuthorize("isAuthenticated()")
@@ -122,6 +124,8 @@ public class EquipmentService {
 
         publishEvent(AuditAction.ASSIGN, id.toString(),
                 Map.of("assignedUserId", userId.toString(), "username", user.getUsername()));
+        // Асинхронне сповіщення призначеному користувачеві через RabbitMQ
+        notificationProducer.sendAssetAssigned(userId, saved.getName(), saved.getId());
         return equipmentMapper.toDto(saved);
     }
 
