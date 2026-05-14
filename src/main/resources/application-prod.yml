@@ -1,0 +1,24 @@
+spring:
+  jpa:
+    show-sql: false
+  thymeleaf:
+    cache: true
+
+logging:
+  level:
+    root: WARN
+    ua.edu.inventory: INFO
+  pattern:
+    console: ""
+  appender:
+    console:
+      class: ch.qos.logback.core.ConsoleAppender
+      encoder:
+        class: net.logstash.logback.encoder.LogstashEncoder
+
+server:
+  server-header: ""
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never

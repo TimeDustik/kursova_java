@@ -1,0 +1,260 @@
+@startuml IT Inventory System — Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageStyle rectangle
+hide empty methods
+
+' ============================================================
+' ENUMS
+' ============================================================
+enum UserRole {
+    WORKER
+    TEAM_LEAD
+    ADMIN
+    AUDITOR
+}
+
+enum EquipmentType {
+    LAPTOP
+    DESKTOP
+    MONITOR
+    PHONE
+    PRINTER
+    NETWORK
+    OTHER
+}
+
+enum EquipmentStatus {
+    IN_STOCK
+    ASSIGNED
+    IN_REPAIR
+    DECOMMISSIONED
+}
+
+enum LicenseType {
+    PERPETUAL
+    SUBSCRIPTION
+    OEM
+    VOLUME
+}
+
+enum AuditAction {
+    CREATE
+    UPDATE
+    DELETE
+    ASSIGN
+    LOGIN
+    LOGOUT
+}
+
+enum NotificationType {
+    LICENSE_EXPIRING
+    WARRANTY_EXPIRING
+    ASSET_ASSIGNED
+}
+
+enum NotificationStatus {
+    PENDING
+    SENT
+    FAILED
+}
+
+' ============================================================
+' BASE ENTITY
+' ============================================================
+abstract class BaseAuditableEntity {
+    # createdAt : LocalDateTime
+    # updatedAt : LocalDateTime
+}
+
+' ============================================================
+' ENTITIES
+' ============================================================
+class User {
+    + id : UUID
+    + username : String
+    + email : String
+    + passwordHash : String
+    + fullName : String
+    + phone : String
+    + role : UserRole
+    + siteId : UUID
+    + active : boolean
+}
+
+class Site {
+    + id : UUID
+    + name : String
+    + address : String
+    + city : String
+    + teamLeadId : UUID
+}
+
+class Equipment {
+    + id : UUID
+    + inventoryNumber : String
+    + name : String
+    + type : EquipmentType
+    + manufacturer : String
+    + model : String
+    + serialNumber : String
+    + status : EquipmentStatus
+    + purchaseDate : LocalDate
+    + warrantyUntil : LocalDate
+    + price : BigDecimal
+    + siteId : UUID
+    + assignedUserId : UUID
+    + notes : String
+}
+
+class License {
+    + id : UUID
+    + softwareName : String
+    + vendor : String
+    + licenseKey : String <<encrypted>>
+    + licenseType : LicenseType
+    + seatsTotal : int
+    + seatsUsed : int
+    + purchaseDate : LocalDate
+    + expirationDate : LocalDate
+    + cost : BigDecimal
+    + siteId : UUID
+    + assignedUserId : UUID
+    + notes : String
+}
+
+class AuditLog {
+    + id : UUID
+    + actorUserId : UUID
+    + action : AuditAction
+    + entityType : String
+    + entityId : String
+    + payload : String <<jsonb>>
+    + ipAddress : String
+    + createdAt : LocalDateTime
+}
+
+class RefreshToken {
+    + id : UUID
+    + userId : UUID
+    + token : String
+    + expiresAt : LocalDateTime
+    + revoked : boolean
+    + createdAt : LocalDateTime
+}
+
+class Notification {
+    + id : UUID
+    + recipientUserId : UUID
+    + type : NotificationType
+    + payload : String <<jsonb>>
+    + status : NotificationStatus
+    + createdAt : LocalDateTime
+    + sentAt : LocalDateTime
+}
+
+' ============================================================
+' SERVICES
+' ============================================================
+class UserService
+class SiteService
+class EquipmentService
+class LicenseService
+class AuditLogService
+class AuthService
+class NotificationService
+class ReportService
+
+' ============================================================
+' DESIGN PATTERNS
+' ============================================================
+
+' Pattern: Strategy
+interface NotificationStrategy <<Strategy>> {
+    + send(notification : Notification) : void
+    + supports(type : NotificationType) : boolean
+}
+class EmailNotificationStrategy implements NotificationStrategy
+class InAppNotificationStrategy implements NotificationStrategy
+class TelegramNotificationStrategy implements NotificationStrategy
+
+' Pattern: Factory Method
+abstract class EquipmentFactory <<Factory Method>> {
+    + {abstract} createEquipment(...) : Equipment
+}
+class LaptopEquipmentFactory extends EquipmentFactory
+class NetworkEquipmentFactory extends EquipmentFactory
+
+' Pattern: Builder
+class EquipmentReportRequest <<Builder>> {
+    + siteId : UUID
+    + from : LocalDate
+    + to : LocalDate
+    + statuses : List<EquipmentStatus>
+    + {static} builder() : Builder
+}
+
+' Pattern: Observer (Spring Events)
+class EntityChangedEvent <<Observer>> {
+    + source : Object
+    + entityType : String
+    + entityId : String
+    + action : AuditAction
+    + payload : Map
+}
+class AuditLogListener <<Observer>> {
+    + onEntityChanged(event : EntityChangedEvent) : void
+}
+
+' Pattern: Specification
+class EquipmentSpecification <<Specification>> {
+    + {static} hasSiteId(id : UUID) : Specification
+    + {static} hasStatus(s : EquipmentStatus) : Specification
+    + {static} hasType(t : EquipmentType) : Specification
+    + {static} assignedTo(userId : UUID) : Specification
+    + {static} searchQuery(q : String) : Specification
+}
+
+' Pattern: Decorator (AttributeConverter)
+class LicenseKeyAttributeConverter <<Decorator>> {
+    - aesKey : SecretKey
+    + convertToDatabaseColumn(key : String) : String
+    + convertToEntityAttribute(encrypted : String) : String
+}
+
+' ============================================================
+' INHERITANCE
+' ============================================================
+User --|> BaseAuditableEntity
+Equipment --|> BaseAuditableEntity
+License --|> BaseAuditableEntity
+
+' ============================================================
+' RELATIONS
+' ============================================================
+Site "1" --> "0..*" User : employs
+Site "1" --> "1" User : teamLead
+Equipment "0..*" --> "1" Site : belongsTo
+Equipment "0..*" --> "0..1" User : assignedTo
+License "0..*" --> "1" Site : belongsTo
+License "0..*" --> "0..1" User : assignedTo
+RefreshToken "0..*" --> "1" User : issuedTo
+Notification "0..*" --> "1" User : sentTo
+AuditLog "0..*" --> "0..1" User : actor
+
+User --> UserRole
+Equipment --> EquipmentType
+Equipment --> EquipmentStatus
+License --> LicenseType
+AuditLog --> AuditAction
+Notification --> NotificationType
+Notification --> NotificationStatus
+
+License --> LicenseKeyAttributeConverter : uses
+NotificationService --> NotificationStrategy : selects
+EquipmentService --> EquipmentFactory : uses
+AuditLogListener --> AuditLog : creates
+EntityChangedEvent ..> AuditLogListener : triggers
+
+@enduml
