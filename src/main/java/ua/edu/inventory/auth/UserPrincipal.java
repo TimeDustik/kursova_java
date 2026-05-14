@@ -23,6 +23,8 @@ public class UserPrincipal implements UserDetails {
     private final UUID id;
     private final String username;
     private final String password;
+    private final String fullName;
+    private final String email;
     private final String role;
     private final UUID siteId;
     private final boolean active;
@@ -32,6 +34,8 @@ public class UserPrincipal implements UserDetails {
                 .id(user.getId())
                 .username(user.getUsername())
                 .password(user.getPasswordHash())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
                 .role(user.getRole().name())
                 .siteId(user.getSiteId())
                 .active(user.isActive())
