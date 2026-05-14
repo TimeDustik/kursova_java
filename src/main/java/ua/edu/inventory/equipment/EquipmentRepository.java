@@ -28,4 +28,8 @@ public interface EquipmentRepository extends JpaRepository<Equipment, UUID>, Jpa
     /** Підраховує загальну кількість обладнання, що не знято з обліку */
     @Query("SELECT COUNT(e) FROM Equipment e WHERE e.status <> ua.edu.inventory.equipment.EquipmentStatus.DECOMMISSIONED")
     long countActive();
+
+    /** Наступне значення PostgreSQL-послідовності для формування інвентарного номера. */
+    @Query(value = "SELECT nextval('equipment_seq')", nativeQuery = true)
+    long nextSeq();
 }
