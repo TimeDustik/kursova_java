@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="uk">
+<head th:replace="~{fragments/layout :: head('Мій інвентар')}"></head>
+<body class="d-flex flex-column min-vh-100">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container-fluid flex-grow-1">
+  <div class="row h-100">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <main class="col-md-10 p-4">
+      <h5 class="mb-4 text-secondary">Мій інвентар</h5>
+      <div th:replace="~{fragments/layout :: alerts}"></div>
+
+      <!-- Equipment table -->
+      <h6 class="mb-3"><i class="bi bi-hdd-stack me-2 text-primary"></i>Обладнання</h6>
+      <div th:if="${#lists.isEmpty(equipment)}" class="text-muted small mb-4">
+        Обладнання не призначено
+      </div>
+      <div th:unless="${#lists.isEmpty(equipment)}" class="table-responsive mb-4">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Інв. №</th>
+              <th>Назва</th>
+              <th>Тип</th>
+              <th>Виробник / Модель</th>
+              <th>Серійний №</th>
+              <th>Статус</th>
+              <th>Гарантія до</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="eq : ${equipment}">
+              <td><code th:text="${eq.inventoryNumber}"></code></td>
+              <td th:text="${eq.name}"></td>
+              <td><span class="badge text-bg-secondary" th:text="${eq.type}"></span></td>
+              <td th:text="${(eq.manufacturer ?: '') + ' ' + (eq.model ?: '')}"></td>
+              <td th:text="${eq.serialNumber}"></td>
+              <td>
+                <span class="badge"
+                      th:classappend="${eq.status.name() == 'ASSIGNED'} ? 'text-bg-success' :
+                                      (${eq.status.name() == 'IN_STOCK'} ? 'text-bg-secondary' :
+                                      'text-bg-danger')"
+                      th:text="${eq.status}"></span>
+              </td>
+              <td th:text="${eq.warrantyUntil}"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Licenses table -->
+      <h6 class="mb-3"><i class="bi bi-key me-2 text-info"></i>Ліцензії</h6>
+      <div th:if="${#lists.isEmpty(licenses)}" class="text-muted small">
+        Ліцензій не призначено
+      </div>
+      <div th:unless="${#lists.isEmpty(licenses)}" class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>ПЗ</th>
+              <th>Вендор</th>
+              <th>Тип</th>
+              <th>Місця</th>
+              <th>Дійсна до</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="lic : ${licenses}">
+              <td th:text="${lic.softwareName}"></td>
+              <td th:text="${lic.vendor}"></td>
+              <td><span class="badge text-bg-info" th:text="${lic.licenseType}"></span></td>
+              <td th:text="${lic.seatsUsed + '/' + lic.seatsTotal}"></td>
+              <td th:text="${lic.expirationDate ?: '—'}"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

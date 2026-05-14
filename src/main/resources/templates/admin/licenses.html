@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="uk">
+<head th:replace="~{fragments/layout :: head('Ліцензії')}"></head>
+<body class="d-flex flex-column min-vh-100">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container-fluid flex-grow-1">
+  <div class="row h-100">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <main class="col-md-10 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-secondary">Ліцензії</h5>
+        <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg me-1"></i> Додати
+          </button>
+        </sec:authorize>
+      </div>
+      <div th:replace="~{fragments/layout :: alerts}"></div>
+
+      <!-- Filters -->
+      <form method="get" class="row g-2 mb-3">
+        <div class="col-sm-5">
+          <input type="text" name="q" class="form-control form-control-sm"
+                 placeholder="Пошук по ПЗ / вендору..." th:value="${filter.q()}"/>
+        </div>
+        <div class="col-sm-4">
+          <select name="licenseType" class="form-select form-select-sm">
+            <option value="">— Тип ліцензії —</option>
+            <option th:each="lt : ${licenseTypes}" th:value="${lt}" th:text="${lt}"
+                    th:selected="${filter.licenseType() == lt}"></option>
+          </select>
+        </div>
+        <div class="col-sm-3">
+          <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+            <i class="bi bi-funnel"></i> Фільтр
+          </button>
+        </div>
+      </form>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>ПЗ</th>
+              <th>Вендор</th>
+              <th>Тип</th>
+              <th>Місця</th>
+              <th>Дата купівлі</th>
+              <th>Дійсна до</th>
+              <th>Вартість</th>
+              <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+                <th></th>
+              </sec:authorize>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:if="${page.totalElements == 0}">
+              <td colspan="8" class="text-center text-muted">Немає записів</td>
+            </tr>
+            <tr th:each="lic : ${page.content}">
+              <td th:text="${lic.softwareName}"></td>
+              <td th:text="${lic.vendor ?: '—'}"></td>
+              <td><span class="badge text-bg-info" th:text="${lic.licenseType}"></span></td>
+              <td>
+                <span th:text="${lic.seatsUsed + '/' + lic.seatsTotal}"></span>
+                <span th:if="${lic.seatsUsed >= lic.seatsTotal}"
+                      class="badge text-bg-danger ms-1">вичерпано</span>
+              </td>
+              <td th:text="${lic.purchaseDate ?: '—'}"></td>
+              <td>
+                <span th:text="${lic.expirationDate ?: '—'}"></span>
+              </td>
+              <td th:text="${lic.cost != null ? lic.cost + ' ₴' : '—'}"></td>
+              <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+                <td>
+                  <form th:action="@{/admin/licenses/{id}/delete(id=${lic.id})}" method="post"
+                        onsubmit="return confirm('Видалити ліцензію?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger py-0">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </sec:authorize>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <nav th:if="${page.totalPages > 1}">
+        <ul class="pagination pagination-sm">
+          <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+            <a class="page-link" th:href="@{/admin/licenses(page=${page.number - 1})}">«</a>
+          </li>
+          <li class="page-item" th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}"
+              th:classappend="${i == page.number} ? 'active'">
+            <a class="page-link" th:href="@{/admin/licenses(page=${i})}" th:text="${i + 1}"></a>
+          </li>
+          <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+            <a class="page-link" th:href="@{/admin/licenses(page=${page.number + 1})}">»</a>
+          </li>
+        </ul>
+      </nav>
+    </main>
+  </div>
+</div>
+
+<!-- Add License Modal -->
+<sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Додати ліцензію</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/licenses" method="post">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small">Назва ПЗ *</label>
+            <input type="text" name="softwareName" class="form-control form-control-sm" required/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Вендор</label>
+            <input type="text" name="vendor" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Тип ліцензії *</label>
+            <select name="licenseType" class="form-select form-select-sm" required>
+              <option th:each="lt : ${licenseTypes}" th:value="${lt}" th:text="${lt}"></option>
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Місць загалом *</label>
+            <input type="number" name="seatsTotal" min="1" value="1"
+                   class="form-control form-control-sm" required/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Об'єкт *</label>
+            <select name="siteId" class="form-select form-select-sm" required>
+              <option th:each="s : ${sites}" th:value="${s.id()}" th:text="${s.name()}"></option>
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Дата купівлі</label>
+            <input type="date" name="purchaseDate" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Дійсна до</label>
+            <input type="date" name="expirationDate" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Вартість (грн)</label>
+            <input type="number" step="0.01" name="cost" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-12">
+            <label class="form-label small">Ліцензійний ключ</label>
+            <input type="text" name="licenseKey" class="form-control form-control-sm"
+                   placeholder="XXXXX-XXXXX-XXXXX"/>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-sm btn-primary">Зберегти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</sec:authorize>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

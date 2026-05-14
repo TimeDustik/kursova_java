@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="uk">
+<head th:replace="~{fragments/layout :: head('Користувачі')}"></head>
+<body class="d-flex flex-column min-vh-100">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container-fluid flex-grow-1">
+  <div class="row h-100">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <main class="col-md-10 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-secondary">Користувачі</h5>
+        <sec:authorize access="hasRole('ADMIN')">
+          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-person-plus me-1"></i> Додати
+          </button>
+        </sec:authorize>
+      </div>
+      <div th:replace="~{fragments/layout :: alerts}"></div>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Логін</th>
+              <th>ПІБ</th>
+              <th>Email</th>
+              <th>Роль</th>
+              <th>Об'єкт</th>
+              <th>Статус</th>
+              <th>Дата реєстрації</th>
+              <sec:authorize access="hasRole('ADMIN')">
+                <th></th>
+              </sec:authorize>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:if="${page.totalElements == 0}">
+              <td colspan="8" class="text-center text-muted">Немає записів</td>
+            </tr>
+            <tr th:each="u : ${page.content}">
+              <td><code th:text="${u.username}"></code></td>
+              <td th:text="${u.fullName ?: '—'}"></td>
+              <td th:text="${u.email}"></td>
+              <td>
+                <span class="badge"
+                      th:classappend="${'badge-role-' + u.role.name()}"
+                      th:text="${u.role}"></span>
+              </td>
+              <td th:text="${u.siteId ?: '—'}"></td>
+              <td>
+                <span class="badge"
+                      th:classappend="${u.active} ? 'text-bg-success' : 'text-bg-danger'"
+                      th:text="${u.active} ? 'Активний' : 'Відключений'"></span>
+              </td>
+              <td th:text="${#temporals.format(u.createdAt, 'dd.MM.yyyy')}"></td>
+              <sec:authorize access="hasRole('ADMIN')">
+                <td>
+                  <form th:if="${u.active}"
+                        th:action="@{/admin/users/{id}/deactivate(id=${u.id})}" method="post"
+                        onsubmit="return confirm('Деактивувати користувача?')">
+                    <button type="submit" class="btn btn-sm btn-outline-warning py-0">
+                      <i class="bi bi-person-dash"></i>
+                    </button>
+                  </form>
+                </td>
+              </sec:authorize>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <nav th:if="${page.totalPages > 1}">
+        <ul class="pagination pagination-sm">
+          <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+            <a class="page-link" th:href="@{/admin/users(page=${page.number - 1})}">«</a>
+          </li>
+          <li class="page-item" th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}"
+              th:classappend="${i == page.number} ? 'active'">
+            <a class="page-link" th:href="@{/admin/users(page=${i})}" th:text="${i + 1}"></a>
+          </li>
+          <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+            <a class="page-link" th:href="@{/admin/users(page=${page.number + 1})}">»</a>
+          </li>
+        </ul>
+      </nav>
+    </main>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<sec:authorize access="hasRole('ADMIN')">
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Новий користувач</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/users" method="post">
+        <div class="modal-body row g-3">
+          <div class="col-sm-6">
+            <label class="form-label small">Логін *</label>
+            <input type="text" name="username" class="form-control form-control-sm" required/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Email *</label>
+            <input type="email" name="email" class="form-control form-control-sm" required/>
+          </div>
+          <div class="col-12">
+            <label class="form-label small">ПІБ</label>
+            <input type="text" name="fullName" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Телефон</label>
+            <input type="tel" name="phone" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Роль *</label>
+            <select name="role" class="form-select form-select-sm" required>
+              <option th:each="r : ${roles}" th:value="${r}" th:text="${r}"></option>
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Об'єкт</label>
+            <select name="siteId" class="form-select form-select-sm">
+              <option value="">— не вказано —</option>
+              <option th:each="s : ${sites}" th:value="${s.id()}" th:text="${s.name()}"></option>
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Пароль *</label>
+            <input type="password" name="password" class="form-control form-control-sm"
+                   minlength="8" required/>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-sm btn-primary">Створити</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</sec:authorize>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

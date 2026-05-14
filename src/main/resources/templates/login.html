@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="uk">
+<head th:replace="~{fragments/layout :: head('Вхід')}"></head>
+<body class="d-flex align-items-center justify-content-center min-vh-100 bg-dark">
+
+<div class="card shadow" style="width: 24rem;">
+  <div class="card-body p-4">
+    <h4 class="card-title text-center mb-4">
+      <i class="bi bi-pc-display-horizontal me-2 text-primary"></i>IT Inventory
+    </h4>
+
+    <div th:if="${param.error}" class="alert alert-danger py-2">
+      <i class="bi bi-exclamation-triangle me-1"></i> Невірний логін або пароль
+    </div>
+    <div th:if="${param.logout}" class="alert alert-info py-2">
+      <i class="bi bi-check-circle me-1"></i> Ви вийшли з системи
+    </div>
+
+    <form th:action="@{/login}" method="post">
+      <div class="mb-3">
+        <label for="username" class="form-label">Логін</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-person"></i></span>
+          <input type="text" id="username" name="username" class="form-control"
+                 placeholder="admin" autofocus required/>
+        </div>
+      </div>
+      <div class="mb-4">
+        <label for="password" class="form-label">Пароль</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock"></i></span>
+          <input type="password" id="password" name="password" class="form-control"
+                 placeholder="••••••••" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Увійти
+      </button>
+    </form>
+  </div>
+  <div class="card-footer text-muted text-center small py-2">
+    Тестові користувачі: admin / teamlead1 / worker1 / auditor
+  </div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

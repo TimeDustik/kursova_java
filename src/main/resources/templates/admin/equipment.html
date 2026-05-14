@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="uk">
+<head th:replace="~{fragments/layout :: head('Обладнання')}"></head>
+<body class="d-flex flex-column min-vh-100">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container-fluid flex-grow-1">
+  <div class="row h-100">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <main class="col-md-10 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-secondary">Обладнання</h5>
+        <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg me-1"></i> Додати
+          </button>
+        </sec:authorize>
+      </div>
+      <div th:replace="~{fragments/layout :: alerts}"></div>
+
+      <!-- Filters -->
+      <form method="get" class="row g-2 mb-3">
+        <div class="col-sm-4">
+          <input type="text" name="q" class="form-control form-control-sm"
+                 placeholder="Пошук..." th:value="${filter.q()}"/>
+        </div>
+        <div class="col-sm-3">
+          <select name="status" class="form-select form-select-sm">
+            <option value="">— Статус —</option>
+            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"
+                    th:selected="${filter.status() == s}"></option>
+          </select>
+        </div>
+        <div class="col-sm-3">
+          <select name="type" class="form-select form-select-sm">
+            <option value="">— Тип —</option>
+            <option th:each="t : ${types}" th:value="${t}" th:text="${t}"
+                    th:selected="${filter.type() == t}"></option>
+          </select>
+        </div>
+        <div class="col-sm-2">
+          <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+            <i class="bi bi-funnel"></i> Фільтр
+          </button>
+        </div>
+      </form>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Інв. №</th>
+              <th>Назва</th>
+              <th>Тип</th>
+              <th>Виробник / Модель</th>
+              <th>Серійний №</th>
+              <th>Статус</th>
+              <th>Гарантія до</th>
+              <th>Ціна</th>
+              <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+                <th></th>
+              </sec:authorize>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:if="${page.totalElements == 0}">
+              <td colspan="9" class="text-center text-muted">Немає записів</td>
+            </tr>
+            <tr th:each="eq : ${page.content}">
+              <td><code th:text="${eq.inventoryNumber}"></code></td>
+              <td th:text="${eq.name}"></td>
+              <td><span class="badge text-bg-secondary" th:text="${eq.type}"></span></td>
+              <td th:text="${(eq.manufacturer ?: '') + ' ' + (eq.model ?: '')}"></td>
+              <td th:text="${eq.serialNumber ?: '—'}"></td>
+              <td>
+                <span class="badge"
+                      th:classappend="${eq.status.name() == 'ASSIGNED'} ? 'text-bg-success' :
+                                      (${eq.status.name() == 'IN_STOCK'} ? 'text-bg-secondary' :
+                                      'text-bg-danger')"
+                      th:text="${eq.status}"></span>
+              </td>
+              <td th:text="${eq.warrantyUntil ?: '—'}"></td>
+              <td th:text="${eq.price != null ? eq.price + ' ₴' : '—'}"></td>
+              <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+                <td>
+                  <form th:action="@{/admin/equipment/{id}/delete(id=${eq.id})}" method="post"
+                        onsubmit="return confirm('Видалити?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger py-0">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </sec:authorize>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <nav th:if="${page.totalPages > 1}">
+        <ul class="pagination pagination-sm">
+          <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+            <a class="page-link" th:href="@{/admin/equipment(page=${page.number - 1})}">«</a>
+          </li>
+          <li class="page-item" th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}"
+              th:classappend="${i == page.number} ? 'active'">
+            <a class="page-link" th:href="@{/admin/equipment(page=${i})}" th:text="${i + 1}"></a>
+          </li>
+          <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+            <a class="page-link" th:href="@{/admin/equipment(page=${page.number + 1})}">»</a>
+          </li>
+        </ul>
+      </nav>
+    </main>
+  </div>
+</div>
+
+<!-- Add Equipment Modal -->
+<sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Додати обладнання</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/equipment" method="post">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small">Назва *</label>
+            <input type="text" name="name" class="form-control form-control-sm" required/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Тип *</label>
+            <select name="type" class="form-select form-select-sm" required>
+              <option th:each="t : ${types}" th:value="${t}" th:text="${t}"></option>
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Об'єкт *</label>
+            <select name="siteId" class="form-select form-select-sm" required>
+              <option th:each="s : ${sites}" th:value="${s.id()}" th:text="${s.name()}"></option>
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Виробник</label>
+            <input type="text" name="manufacturer" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Модель</label>
+            <input type="text" name="model" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Серійний №</label>
+            <input type="text" name="serialNumber" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Ціна (грн)</label>
+            <input type="number" step="0.01" name="price" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Дата купівлі</label>
+            <input type="date" name="purchaseDate" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-12">
+            <label class="form-label small">Примітки</label>
+            <textarea name="notes" class="form-control form-control-sm" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-sm btn-primary">Зберегти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</sec:authorize>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

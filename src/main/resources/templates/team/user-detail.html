@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="uk">
+<head th:replace="~{fragments/layout :: head('Деталі учасника')}"></head>
+<body class="d-flex flex-column min-vh-100">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container-fluid flex-grow-1">
+  <div class="row h-100">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <main class="col-md-10 p-4">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="/team" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <h5 class="mb-0 text-secondary"
+            th:text="${member.fullName ?: member.username}"></h5>
+        <span class="badge"
+              th:classappend="${'badge-role-' + member.role.name()}"
+              th:text="${member.role}"></span>
+      </div>
+      <div th:replace="~{fragments/layout :: alerts}"></div>
+
+      <!-- Member info card -->
+      <div class="card mb-4">
+        <div class="card-body row g-3">
+          <div class="col-sm-4">
+            <div class="text-muted small">Логін</div>
+            <div th:text="${'@' + member.username}"></div>
+          </div>
+          <div class="col-sm-4">
+            <div class="text-muted small">Email</div>
+            <div th:text="${member.email}"></div>
+          </div>
+          <div class="col-sm-4">
+            <div class="text-muted small">Телефон</div>
+            <div th:text="${member.phone ?: '—'}"></div>
+          </div>
+          <div class="col-sm-4">
+            <div class="text-muted small">Статус</div>
+            <span class="badge"
+                  th:classappend="${member.active} ? 'text-bg-success' : 'text-bg-danger'"
+                  th:text="${member.active} ? 'Активний' : 'Деактивовано'"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipment -->
+      <h6 class="mb-3"><i class="bi bi-hdd-stack me-2 text-primary"></i>Обладнання</h6>
+      <div th:if="${#lists.isEmpty(equipment)}" class="text-muted small mb-4">Немає призначеного обладнання</div>
+      <div th:unless="${#lists.isEmpty(equipment)}" class="table-responsive mb-4">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Інв. №</th><th>Назва</th><th>Тип</th><th>Статус</th><th>Гарантія до</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="eq : ${equipment}">
+              <td><code th:text="${eq.inventoryNumber}"></code></td>
+              <td th:text="${eq.name}"></td>
+              <td><span class="badge text-bg-secondary" th:text="${eq.type}"></span></td>
+              <td><span class="badge text-bg-success" th:text="${eq.status}"></span></td>
+              <td th:text="${eq.warrantyUntil ?: '—'}"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Licenses -->
+      <h6 class="mb-3"><i class="bi bi-key me-2 text-info"></i>Ліцензії</h6>
+      <div th:if="${#lists.isEmpty(licenses)}" class="text-muted small">Немає призначених ліцензій</div>
+      <div th:unless="${#lists.isEmpty(licenses)}" class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>ПЗ</th><th>Вендор</th><th>Тип</th><th>Дійсна до</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="lic : ${licenses}">
+              <td th:text="${lic.softwareName}"></td>
+              <td th:text="${lic.vendor}"></td>
+              <td><span class="badge text-bg-info" th:text="${lic.licenseType}"></span></td>
+              <td th:text="${lic.expirationDate ?: '—'}"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

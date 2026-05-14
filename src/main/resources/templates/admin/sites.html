@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="uk">
+<head th:replace="~{fragments/layout :: head('Об\'єкти')}"></head>
+<body class="d-flex flex-column min-vh-100">
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container-fluid flex-grow-1">
+  <div class="row h-100">
+    <div th:replace="~{fragments/layout :: sidebar}"></div>
+
+    <main class="col-md-10 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-secondary">Об'єкти</h5>
+        <sec:authorize access="hasRole('ADMIN')">
+          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg me-1"></i> Додати
+          </button>
+        </sec:authorize>
+      </div>
+      <div th:replace="~{fragments/layout :: alerts}"></div>
+
+      <div class="row g-3">
+        <div th:if="${#lists.isEmpty(sites)}" class="col-12">
+          <div class="text-muted">Об'єктів ще немає.</div>
+        </div>
+        <div th:each="site : ${sites}" class="col-md-6 col-xl-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h6 class="card-title fw-semibold">
+                <i class="bi bi-building me-1 text-warning"></i>
+                <span th:text="${site.name()}"></span>
+              </h6>
+              <div class="text-muted small" th:text="${site.address() ?: ''}"></div>
+              <div class="text-muted small" th:text="${site.city() ?: ''}"></div>
+              <div class="mt-2 small">
+                <span class="text-secondary">Team Lead ID: </span>
+                <code th:text="${site.teamLeadId() ?: '—'}"></code>
+              </div>
+              <div class="mt-1 small text-muted"
+                   th:text="${'Створено: ' + #temporals.format(site.createdAt(), 'dd.MM.yyyy')}"></div>
+            </div>
+            <sec:authorize access="hasRole('ADMIN')">
+              <div class="card-footer bg-transparent">
+                <form th:action="@{/admin/sites/{id}/delete(id=${site.id()})}" method="post"
+                      onsubmit="return confirm('Видалити об\'єкт?')">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash me-1"></i> Видалити
+                  </button>
+                </form>
+              </div>
+            </sec:authorize>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Add Site Modal -->
+<sec:authorize access="hasRole('ADMIN')">
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Новий об'єкт</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/sites" method="post">
+        <div class="modal-body row g-3">
+          <div class="col-12">
+            <label class="form-label small">Назва *</label>
+            <input type="text" name="name" class="form-control form-control-sm" required/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Адреса</label>
+            <input type="text" name="address" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small">Місто</label>
+            <input type="text" name="city" class="form-control form-control-sm"/>
+          </div>
+          <div class="col-12">
+            <label class="form-label small">Team Lead ID (UUID)</label>
+            <input type="text" name="teamLeadId" class="form-control form-control-sm"
+                   placeholder="00000000-0000-0000-0000-000000000000"/>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-sm btn-primary">Зберегти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</sec:authorize>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

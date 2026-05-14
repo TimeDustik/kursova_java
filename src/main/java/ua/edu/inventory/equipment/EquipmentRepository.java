@@ -25,6 +25,8 @@ public interface EquipmentRepository extends JpaRepository<Equipment, UUID>, Jpa
 
     long countBySiteIdAndStatus(UUID siteId, EquipmentStatus status);
 
+    long countByStatus(EquipmentStatus status);
+
     /** Підраховує загальну кількість обладнання, що не знято з обліку */
     @Query("SELECT COUNT(e) FROM Equipment e WHERE e.status <> ua.edu.inventory.equipment.EquipmentStatus.DECOMMISSIONED")
     long countActive();
