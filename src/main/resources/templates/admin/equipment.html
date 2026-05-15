@@ -128,7 +128,7 @@
         <h6 class="modal-title">Додати обладнання</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form action="/admin/equipment" method="post">
+      <form th:action="@{/admin/equipment}" method="post">
         <div class="modal-body row g-3">
           <div class="col-12">
             <label class="form-label small">Назва *</label>

@@ -101,7 +101,7 @@
         <h6 class="modal-title">Новий користувач</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form action="/admin/users" method="post">
+      <form th:action="@{/admin/users}" method="post">
         <div class="modal-body row g-3">
           <div class="col-sm-6">
             <label class="form-label small">Логін *</label>
