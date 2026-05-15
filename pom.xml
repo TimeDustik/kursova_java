@@ -227,6 +227,18 @@
                 <version>3.3.2</version>
             </plugin>
 
+            <!-- Surefire — pass Docker env to forked JVM for Testcontainers -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <DOCKER_HOST>unix:///var/run/docker.sock</DOCKER_HOST>
+                        <TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+
             <!-- Jacoco — minimum 60% coverage -->
             <plugin>
                 <groupId>org.jacoco</groupId>
