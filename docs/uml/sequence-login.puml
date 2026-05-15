@@ -1,0 +1,73 @@
+@startuml Login Sequence
+!theme plain
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+skinparam sequenceParticipantBackgroundColor #FAFAFA
+
+title Sequence: POST /api/v1/auth/login → Access + Refresh tokens
+
+actor Client
+participant "AuthController" as AC
+participant "AuthService" as AS
+participant "AuthenticationManager" as AM
+participant "UserDetailsService" as UDS
+participant "UserRepository" as UR
+participant "JwtService" as JS
+participant "RefreshTokenRepository" as RTR
+database "PostgreSQL" as DB
+
+Client -> AC : POST /api/v1/auth/login\n{username, password}
+
+activate AC
+AC -> AS : login(username, password)
+
+activate AS
+AS -> AM : authenticate(UsernamePasswordAuthenticationToken)
+
+activate AM
+AM -> UDS : loadUserByUsername(username)
+
+activate UDS
+UDS -> UR : findByUsername(username)
+UR -> DB : SELECT * FROM users
+DB --> UR : User entity
+UR --> UDS : User
+UDS --> AM : UserPrincipal (implements UserDetails)
+deactivate UDS
+
+AM -> AM : BCrypt verify(password, hash)
+alt Invalid credentials
+  AM --> AS : BadCredentialsException
+  AS --> AC : throw Unauthorized
+  AC --> Client : 401 Unauthorized
+end
+
+AM --> AS : Authentication (authenticated=true)
+deactivate AM
+
+AS -> JS : generateAccessToken(principal)
+JS --> AS : accessToken (JWT, 15 min)
+
+AS -> AS : create RefreshToken\n(UUID, userId, expiresAt)
+AS -> RTR : save(refreshToken)
+RTR -> DB : INSERT INTO refresh_tokens
+DB --> RTR : saved
+
+AS --> AC : AuthResponse\n{accessToken, refreshToken, role}
+deactivate AS
+
+AC --> Client : 200 OK\n{accessToken, refreshToken, role, userId}
+deactivate AC
+
+== Using the access token ==
+
+Client -> AC : GET /api/v1/equipment\nAuthorization: Bearer <accessToken>
+note over AC : JwtAuthenticationFilter intercepts
+AC -> JS : isValid(accessToken)
+JS --> AC : true
+AC -> JS : extractClaims(token)
+JS --> AC : {userId, username, role, siteId}
+AC -> AC : set SecurityContextHolder
+AC --> Client : 200 OK (equipment list)
+
+@enduml

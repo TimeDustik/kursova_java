@@ -1,260 +1,291 @@
-@startuml IT Inventory System — Class Diagram
-
+@startuml IT-Inventory Class Diagram
+!theme plain
 skinparam classAttributeIconSize 0
-skinparam classFontSize 13
-skinparam packageStyle rectangle
-hide empty methods
+skinparam classFontSize 12
+skinparam packageFontSize 13
+skinparam arrowColor #555555
+skinparam classBackgroundColor #FAFAFA
+skinparam classBorderColor #888888
 
-' ============================================================
-' ENUMS
-' ============================================================
-enum UserRole {
-    WORKER
-    TEAM_LEAD
-    ADMIN
-    AUDITOR
+title IT Inventory System — Class Diagram (Patterns highlighted in <<>>)
+
+' ──────────────────── COMMON ───────────────────────────────────────────────────
+
+package "common" {
+  abstract class BaseAuditableEntity {
+    # createdAt: LocalDateTime
+    # updatedAt: LocalDateTime
+  }
+
+  class SecurityUtils <<utility>> {
+    + {static} getCurrentPrincipal(): Optional<UserPrincipal>
+    + {static} getCurrentUserId(): UUID
+  }
+
+  interface PermissionEvaluator {
+    + hasPermission(auth, targetId, targetType, permission): boolean
+  }
+
+  class InventoryPermissionEvaluator <<Strategy>> {
+    - equipmentRepository
+    - licenseRepository
+    + hasPermission(...): boolean
+  }
+  InventoryPermissionEvaluator ..|> PermissionEvaluator
 }
 
-enum EquipmentType {
-    LAPTOP
-    DESKTOP
-    MONITOR
-    PHONE
-    PRINTER
-    NETWORK
-    OTHER
+' ──────────────────── USER / SITE ──────────────────────────────────────────────
+
+package "user" {
+  class User {
+    + id: UUID
+    + username: String
+    + email: String
+    + fullName: String
+    + passwordHash: String
+    + role: UserRole
+    + siteId: UUID
+    + active: boolean
+  }
+  enum UserRole { ADMIN / TEAM_LEAD / WORKER / AUDITOR }
+  User --> UserRole
+  User --|> BaseAuditableEntity
 }
 
-enum EquipmentStatus {
-    IN_STOCK
-    ASSIGNED
-    IN_REPAIR
-    DECOMMISSIONED
+package "site" {
+  class Site {
+    + id: UUID
+    + name: String
+    + address: String
+    + city: String
+    + teamLeadId: UUID
+    + createdAt: LocalDateTime
+  }
 }
 
-enum LicenseType {
-    PERPETUAL
-    SUBSCRIPTION
-    OEM
-    VOLUME
+' ──────────────────── EQUIPMENT ────────────────────────────────────────────────
+
+package "equipment" {
+  class Equipment {
+    + id: UUID
+    + inventoryNumber: String
+    + name: String
+    + type: EquipmentType
+    + manufacturer: String
+    + status: EquipmentStatus
+    + purchaseDate: LocalDate
+    + warrantyUntil: LocalDate
+    + price: BigDecimal
+    + siteId: UUID
+    + assignedUserId: UUID
+  }
+  Equipment --|> BaseAuditableEntity
+
+  enum EquipmentType  { LAPTOP / DESKTOP / MONITOR / PHONE / PRINTER / NETWORK / OTHER }
+  enum EquipmentStatus { IN_STOCK / ASSIGNED / UNDER_REPAIR / DECOMMISSIONED }
+  Equipment --> EquipmentType
+  Equipment --> EquipmentStatus
+
+  abstract class EquipmentFactory <<Factory Method>> {
+    + {static} forType(type): EquipmentFactory
+    + {abstract} createWithDefaults(dto, invNum): Equipment
+    # {abstract} defaultWarrantyYears(): int
+  }
+  class ComputerEquipmentFactory  { # defaultWarrantyYears() = 3 }
+  class NetworkEquipmentFactory   { # defaultWarrantyYears() = 5 }
+  class DefaultEquipmentFactory   { # defaultWarrantyYears() = 1 }
+  EquipmentFactory <|-- ComputerEquipmentFactory
+  EquipmentFactory <|-- NetworkEquipmentFactory
+  EquipmentFactory <|-- DefaultEquipmentFactory
+
+  class EquipmentSpecification <<Specification>> {
+    + {static} hasSiteId(siteId): Specification
+    + {static} hasStatus(status): Specification
+    + {static} assignedTo(userId): Specification
+    + {static} searchQuery(q): Specification
+    + {static} from(filter): Specification
+  }
 }
 
-enum AuditAction {
-    CREATE
-    UPDATE
-    DELETE
-    ASSIGN
-    LOGIN
-    LOGOUT
+' ──────────────────── LICENSE ──────────────────────────────────────────────────
+
+package "license" {
+  class License {
+    + id: UUID
+    + softwareName: String
+    + vendor: String
+    + licenseKey: String <<AES-256-GCM encrypted>>
+    + licenseType: LicenseType
+    + seatsTotal: int
+    + seatsUsed: int
+    + expirationDate: LocalDate
+    + cost: BigDecimal
+    + siteId: UUID
+    + hasAvailableSeats(): boolean
+  }
+  License --|> BaseAuditableEntity
+
+  enum LicenseType { PERPETUAL / SUBSCRIPTION / OEM / VOLUME }
+  License --> LicenseType
+
+  class LicenseSpecification <<Specification>> {
+    + {static} hasSiteId(siteId): Specification
+    + {static} assignedTo(userId): Specification
+    + {static} from(filter): Specification
+  }
 }
 
-enum NotificationType {
-    LICENSE_EXPIRING
-    WARRANTY_EXPIRING
-    ASSET_ASSIGNED
+' ──────────────────── CRYPTO (Decorator) ──────────────────────────────────────
+
+package "crypto" {
+  class LicenseKeyAttributeConverter <<Decorator>> {
+    - {static} secretKey: SecretKey
+    + convertToDatabaseColumn(key): String
+    + convertToEntityAttribute(dbData): String
+  }
+  class AesKeyHolder {
+    + init(): void
+  }
+  AesKeyHolder --> LicenseKeyAttributeConverter : initialises static key
+  License ..> LicenseKeyAttributeConverter : "@Convert"
 }
 
-enum NotificationStatus {
-    PENDING
-    SENT
-    FAILED
+' ──────────────────── AUTH ─────────────────────────────────────────────────────
+
+package "auth" {
+  class UserPrincipal {
+    + id: UUID
+    + username: String
+    + role: String
+    + siteId: UUID
+    + {static} from(user: User): UserPrincipal
+    + getAuthorities(): Collection
+  }
+
+  class JwtService <<Singleton>> {
+    - signingKey: SecretKey
+    + generateAccessToken(principal): String
+    + extractClaims(token): Claims
+    + isValid(token): boolean
+  }
+
+  class RefreshToken {
+    + token: String
+    + userId: UUID
+    + expiresAt: LocalDateTime
+    + revoked: boolean
+    + isValid(): boolean
+  }
+
+  class AuthService {
+    + login(username, password): AuthResponse
+    + refresh(refreshToken): AuthResponse
+    + logout(userId): void
+  }
+
+  UserPrincipal --> User
+  AuthService --> JwtService
+  AuthService --> RefreshToken
 }
 
-' ============================================================
-' BASE ENTITY
-' ============================================================
-abstract class BaseAuditableEntity {
-    # createdAt : LocalDateTime
-    # updatedAt : LocalDateTime
+' ──────────────────── AUDIT (Observer) ────────────────────────────────────────
+
+package "audit" {
+  class EntityChangedEvent <<ApplicationEvent>> {
+    + action: AuditAction
+    + entityType: String
+    + entityId: String
+    + payload: Map
+    + actorUserId: UUID
+  }
+
+  class AuditLog {
+    + id: UUID
+    + actorUserId: UUID
+    + action: AuditAction
+    + entityType: String
+    + entityId: String
+    + payload: Map <<JSONB>>
+    + createdAt: LocalDateTime
+  }
+
+  class AuditLogListener <<Observer>> {
+    + onEntityChanged(event): void
+  }
+
+  enum AuditAction { CREATE / UPDATE / DELETE / ASSIGN / LOGIN / LOGOUT }
+  AuditLog --> AuditAction
+  AuditLogListener ..> EntityChangedEvent : "@EventListener"
+  AuditLogListener --> AuditLog : saves
 }
 
-' ============================================================
-' ENTITIES
-' ============================================================
-class User {
-    + id : UUID
-    + username : String
-    + email : String
-    + passwordHash : String
-    + fullName : String
-    + phone : String
-    + role : UserRole
-    + siteId : UUID
-    + active : boolean
+' ──────────────────── NOTIFICATION (Strategy) ─────────────────────────────────
+
+package "notification" {
+  interface NotificationStrategy <<Strategy>> {
+    + supports(type: NotificationType): boolean
+    + send(notification: Notification): void
+  }
+  class EmailNotificationStrategy
+  class InAppNotificationStrategy
+  class TelegramNotificationStrategy
+  NotificationStrategy <|.. EmailNotificationStrategy
+  NotificationStrategy <|.. InAppNotificationStrategy
+  NotificationStrategy <|.. TelegramNotificationStrategy
+
+  class NotificationService {
+    - strategies: List<NotificationStrategy>
+    + process(message): void
+  }
+  NotificationService --> NotificationStrategy
+
+  class LicenseExpiryScheduler {
+    + checkLicenseExpiry(): void
+    + checkWarrantyExpiry(): void
+  }
 }
 
-class Site {
-    + id : UUID
-    + name : String
-    + address : String
-    + city : String
-    + teamLeadId : UUID
+' ──────────────────── REPORT (Builder) ────────────────────────────────────────
+
+package "report" {
+  class EquipmentReportRequest <<Builder>> {
+    - siteId: UUID
+    - from / to: LocalDate
+    - statuses: List
+    - types: List
+    + {static} builder(): Builder
+  }
+
+  class LicenseReportRequest <<Builder>> {
+    - siteId: UUID
+    - from / to: LocalDate
+    - licenseTypes: List
+    + {static} builder(): Builder
+  }
+
+  class ExcelReportGenerator {
+    + generateInventoryReport(siteId): byte[]
+    + generateLicenseReport(siteId): byte[]
+  }
+
+  class ReportStore <<Singleton>> {
+    - store: ConcurrentHashMap
+    + save(id, status, content, filename): void
+    + get(id): Entry
+  }
+
+  class ReportProducer {
+    + requestInventoryReport(siteId): UUID
+    + requestLicenseReport(siteId): UUID
+  }
+
+  class ReportConsumer {
+    + consume(message: ReportMessage): void
+  }
+
+  ReportConsumer --> ExcelReportGenerator
+  ReportConsumer --> ReportStore
+  ReportProducer --> ReportStore : PENDING
 }
-
-class Equipment {
-    + id : UUID
-    + inventoryNumber : String
-    + name : String
-    + type : EquipmentType
-    + manufacturer : String
-    + model : String
-    + serialNumber : String
-    + status : EquipmentStatus
-    + purchaseDate : LocalDate
-    + warrantyUntil : LocalDate
-    + price : BigDecimal
-    + siteId : UUID
-    + assignedUserId : UUID
-    + notes : String
-}
-
-class License {
-    + id : UUID
-    + softwareName : String
-    + vendor : String
-    + licenseKey : String <<encrypted>>
-    + licenseType : LicenseType
-    + seatsTotal : int
-    + seatsUsed : int
-    + purchaseDate : LocalDate
-    + expirationDate : LocalDate
-    + cost : BigDecimal
-    + siteId : UUID
-    + assignedUserId : UUID
-    + notes : String
-}
-
-class AuditLog {
-    + id : UUID
-    + actorUserId : UUID
-    + action : AuditAction
-    + entityType : String
-    + entityId : String
-    + payload : String <<jsonb>>
-    + ipAddress : String
-    + createdAt : LocalDateTime
-}
-
-class RefreshToken {
-    + id : UUID
-    + userId : UUID
-    + token : String
-    + expiresAt : LocalDateTime
-    + revoked : boolean
-    + createdAt : LocalDateTime
-}
-
-class Notification {
-    + id : UUID
-    + recipientUserId : UUID
-    + type : NotificationType
-    + payload : String <<jsonb>>
-    + status : NotificationStatus
-    + createdAt : LocalDateTime
-    + sentAt : LocalDateTime
-}
-
-' ============================================================
-' SERVICES
-' ============================================================
-class UserService
-class SiteService
-class EquipmentService
-class LicenseService
-class AuditLogService
-class AuthService
-class NotificationService
-class ReportService
-
-' ============================================================
-' DESIGN PATTERNS
-' ============================================================
-
-' Pattern: Strategy
-interface NotificationStrategy <<Strategy>> {
-    + send(notification : Notification) : void
-    + supports(type : NotificationType) : boolean
-}
-class EmailNotificationStrategy implements NotificationStrategy
-class InAppNotificationStrategy implements NotificationStrategy
-class TelegramNotificationStrategy implements NotificationStrategy
-
-' Pattern: Factory Method
-abstract class EquipmentFactory <<Factory Method>> {
-    + {abstract} createEquipment(...) : Equipment
-}
-class LaptopEquipmentFactory extends EquipmentFactory
-class NetworkEquipmentFactory extends EquipmentFactory
-
-' Pattern: Builder
-class EquipmentReportRequest <<Builder>> {
-    + siteId : UUID
-    + from : LocalDate
-    + to : LocalDate
-    + statuses : List<EquipmentStatus>
-    + {static} builder() : Builder
-}
-
-' Pattern: Observer (Spring Events)
-class EntityChangedEvent <<Observer>> {
-    + source : Object
-    + entityType : String
-    + entityId : String
-    + action : AuditAction
-    + payload : Map
-}
-class AuditLogListener <<Observer>> {
-    + onEntityChanged(event : EntityChangedEvent) : void
-}
-
-' Pattern: Specification
-class EquipmentSpecification <<Specification>> {
-    + {static} hasSiteId(id : UUID) : Specification
-    + {static} hasStatus(s : EquipmentStatus) : Specification
-    + {static} hasType(t : EquipmentType) : Specification
-    + {static} assignedTo(userId : UUID) : Specification
-    + {static} searchQuery(q : String) : Specification
-}
-
-' Pattern: Decorator (AttributeConverter)
-class LicenseKeyAttributeConverter <<Decorator>> {
-    - aesKey : SecretKey
-    + convertToDatabaseColumn(key : String) : String
-    + convertToEntityAttribute(encrypted : String) : String
-}
-
-' ============================================================
-' INHERITANCE
-' ============================================================
-User --|> BaseAuditableEntity
-Equipment --|> BaseAuditableEntity
-License --|> BaseAuditableEntity
-
-' ============================================================
-' RELATIONS
-' ============================================================
-Site "1" --> "0..*" User : employs
-Site "1" --> "1" User : teamLead
-Equipment "0..*" --> "1" Site : belongsTo
-Equipment "0..*" --> "0..1" User : assignedTo
-License "0..*" --> "1" Site : belongsTo
-License "0..*" --> "0..1" User : assignedTo
-RefreshToken "0..*" --> "1" User : issuedTo
-Notification "0..*" --> "1" User : sentTo
-AuditLog "0..*" --> "0..1" User : actor
-
-User --> UserRole
-Equipment --> EquipmentType
-Equipment --> EquipmentStatus
-License --> LicenseType
-AuditLog --> AuditAction
-Notification --> NotificationType
-Notification --> NotificationStatus
-
-License --> LicenseKeyAttributeConverter : uses
-NotificationService --> NotificationStrategy : selects
-EquipmentService --> EquipmentFactory : uses
-AuditLogListener --> AuditLog : creates
-EntityChangedEvent ..> AuditLogListener : triggers
 
 @enduml
