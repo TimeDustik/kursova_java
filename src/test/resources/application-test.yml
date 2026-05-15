@@ -22,8 +22,8 @@ jwt:
   refresh-token-ttl-seconds: 604800
 
 crypto:
-  # 32 bytes → valid AES-256 key (Base64)
-  aes-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  # exactly 32 ASCII chars → 256-bit AES key
+  aes-key: TestAESKeyForTests1234567890ABCD
 
 rabbitmq:
   exchanges:
