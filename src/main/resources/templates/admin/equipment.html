@@ -13,11 +13,16 @@
     <main class="col-md-10 p-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0 text-secondary">Обладнання</h5>
-        <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
-          <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
-            <i class="bi bi-plus-lg me-1"></i> Додати
-          </button>
-        </sec:authorize>
+        <div class="d-flex gap-2">
+          <a th:href="@{/report/equipment.xlsx}" class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+          </a>
+          <span sec:authorize="hasAnyRole('ADMIN','TEAM_LEAD')">
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+              <i class="bi bi-plus-lg me-1"></i> Додати
+            </button>
+          </span>
+        </div>
       </div>
       <div th:replace="~{fragments/layout :: alerts}"></div>
 
