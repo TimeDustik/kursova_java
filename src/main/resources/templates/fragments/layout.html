@@ -38,6 +38,9 @@
   </a>
   <div class="d-flex align-items-center gap-3">
     <span class="text-light small" sec:authentication="name">Гість</span>
+    <span th:if="${#authentication != null and #authentication.principal.siteName != null}"
+          class="text-light small opacity-75"
+          th:text="${#authentication.principal.siteName}"></span>
     <span class="badge text-bg-secondary"
           sec:authentication="principal.role">—</span>
     <form th:action="@{/web/logout}" method="post" class="m-0">
@@ -62,46 +65,40 @@
       </a>
     </li>
 
-    <sec:authorize access="hasRole('TEAM_LEAD')">
-      <li class="nav-item">
-        <a class="nav-link" th:classappend="${activePage == 'team'} ? 'active'" href="/team">
-          <i class="bi bi-people"></i> Команда
-        </a>
-      </li>
-    </sec:authorize>
+    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','TEAM_LEAD')">
+      <a class="nav-link" th:classappend="${activePage == 'team'} ? 'active'" href="/team">
+        <i class="bi bi-people"></i> Команда
+      </a>
+    </li>
 
-    <sec:authorize access="hasAnyRole('ADMIN','AUDITOR','TEAM_LEAD')">
-      <hr class="border-secondary my-2"/>
-      <li class="nav-item small text-secondary px-2 mb-1">УПРАВЛІННЯ</li>
-      <li class="nav-item">
-        <a class="nav-link" th:classappend="${activePage == 'equipment'} ? 'active'" href="/admin/equipment">
-          <i class="bi bi-hdd-stack"></i> Обладнання
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" th:classappend="${activePage == 'licenses'} ? 'active'" href="/admin/licenses">
-          <i class="bi bi-key"></i> Ліцензії
-        </a>
-      </li>
-    </sec:authorize>
-
-    <sec:authorize access="hasAnyRole('ADMIN','AUDITOR')">
-      <li class="nav-item">
-        <a class="nav-link" th:classappend="${activePage == 'users'} ? 'active'" href="/admin/users">
-          <i class="bi bi-person-lines-fill"></i> Користувачі
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" th:classappend="${activePage == 'sites'} ? 'active'" href="/admin/sites">
-          <i class="bi bi-building"></i> Об'єкти
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" th:classappend="${activePage == 'audit'} ? 'active'" href="/admin/audit-log">
-          <i class="bi bi-journal-text"></i> Журнал аудиту
-        </a>
-      </li>
-    </sec:authorize>
+    <hr class="border-secondary my-2" sec:authorize="hasAnyRole('ADMIN','AUDITOR','TEAM_LEAD')"/>
+    <li class="nav-item small text-secondary px-2 mb-1"
+        sec:authorize="hasAnyRole('ADMIN','AUDITOR','TEAM_LEAD')">УПРАВЛІННЯ</li>
+    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','AUDITOR','TEAM_LEAD')">
+      <a class="nav-link" th:classappend="${activePage == 'equipment'} ? 'active'" href="/admin/equipment">
+        <i class="bi bi-hdd-stack"></i> Обладнання
+      </a>
+    </li>
+    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','AUDITOR','TEAM_LEAD')">
+      <a class="nav-link" th:classappend="${activePage == 'licenses'} ? 'active'" href="/admin/licenses">
+        <i class="bi bi-key"></i> Ліцензії
+      </a>
+    </li>
+    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','AUDITOR')">
+      <a class="nav-link" th:classappend="${activePage == 'users'} ? 'active'" href="/admin/users">
+        <i class="bi bi-person-lines-fill"></i> Користувачі
+      </a>
+    </li>
+    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','AUDITOR')">
+      <a class="nav-link" th:classappend="${activePage == 'sites'} ? 'active'" href="/admin/sites">
+        <i class="bi bi-building"></i> Об'єкти
+      </a>
+    </li>
+    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','AUDITOR')">
+      <a class="nav-link" th:classappend="${activePage == 'audit'} ? 'active'" href="/admin/audit-log">
+        <i class="bi bi-journal-text"></i> Журнал аудиту
+      </a>
+    </li>
   </ul>
 </div>
 

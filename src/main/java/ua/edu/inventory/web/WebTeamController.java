@@ -22,7 +22,7 @@ import java.util.UUID;
 @Controller
 @RequestMapping("/team")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('TEAM_LEAD')")
+@PreAuthorize("hasAnyRole('TEAM_LEAD','ADMIN')")
 public class WebTeamController {
 
     private final UserRepository       userRepository;
@@ -34,9 +34,11 @@ public class WebTeamController {
 
     @GetMapping
     public String team(@AuthenticationPrincipal UserPrincipal principal, Model model) {
-        UUID siteId = principal.getSiteId();
-        var members = userRepository.findAllBySiteIdAndActiveTrue(siteId)
-                .stream().map(userMapper::toDto).toList();
+        boolean isAdmin = principal.getRole().equals("ADMIN");
+        var members = isAdmin
+                ? userRepository.findAllByActiveTrue().stream().map(userMapper::toDto).toList()
+                : userRepository.findAllBySiteIdAndActiveTrue(principal.getSiteId())
+                        .stream().map(userMapper::toDto).toList();
 
         model.addAttribute("members",    members);
         model.addAttribute("activePage", "team");
@@ -50,8 +52,8 @@ public class WebTeamController {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Користувач", userId));
 
-        // Team Lead can only see their own site members
-        if (!user.getSiteId().equals(principal.getSiteId())) {
+        boolean isAdmin = principal.getRole().equals("ADMIN");
+        if (!isAdmin && !user.getSiteId().equals(principal.getSiteId())) {
             return "redirect:/team";
         }
 

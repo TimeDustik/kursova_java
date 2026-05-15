@@ -63,7 +63,7 @@ public class AuthService {
             throw new BusinessRuleException("Обліковий запис деактивовано");
         }
 
-        return buildAuthResponse(UserPrincipal.from(user));
+        return buildAuthResponse(UserPrincipal.from(user, null));
     }
 
     @Transactional

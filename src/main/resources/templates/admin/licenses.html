@@ -30,8 +30,8 @@
         <div class="col-sm-4">
           <select name="licenseType" class="form-select form-select-sm">
             <option value="">— Тип ліцензії —</option>
-            <option th:each="lt : ${licenseTypes}" th:value="${lt}" th:text="${lt}"
-                    th:selected="${filter.licenseType() == lt}"></option>
+            <option th:each="licType : ${licenseTypes}" th:value="${licType}" th:text="${licType}"
+                    th:selected="${filter.licenseType() == licType}"></option>
           </select>
         </div>
         <div class="col-sm-3">
@@ -132,7 +132,7 @@
           <div class="col-sm-6">
             <label class="form-label small">Тип ліцензії *</label>
             <select name="licenseType" class="form-select form-select-sm" required>
-              <option th:each="lt : ${licenseTypes}" th:value="${lt}" th:text="${lt}"></option>
+              <option th:each="licType : ${licenseTypes}" th:value="${licType}" th:text="${licType}"></option>
             </select>
           </div>
           <div class="col-sm-6">

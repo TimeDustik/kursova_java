@@ -27,9 +27,10 @@ public class UserPrincipal implements UserDetails {
     private final String email;
     private final String role;
     private final UUID siteId;
+    private final String siteName;
     private final boolean active;
 
-    public static UserPrincipal from(User user) {
+    public static UserPrincipal from(User user, String siteName) {
         return UserPrincipal.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -38,6 +39,7 @@ public class UserPrincipal implements UserDetails {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .siteId(user.getSiteId())
+                .siteName(siteName)
                 .active(user.isActive())
                 .build();
     }

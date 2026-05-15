@@ -57,12 +57,12 @@
             </tr>
           </thead>
           <tbody>
-            <tr th:each="eq : ${equipment}">
-              <td><code th:text="${eq.inventoryNumber}"></code></td>
-              <td th:text="${eq.name}"></td>
-              <td><span class="badge text-bg-secondary" th:text="${eq.type}"></span></td>
-              <td><span class="badge text-bg-success" th:text="${eq.status}"></span></td>
-              <td th:text="${eq.warrantyUntil ?: '—'}"></td>
+            <tr th:each="item : ${equipment}">
+              <td><code th:text="${item.inventoryNumber}"></code></td>
+              <td th:text="${item.name}"></td>
+              <td><span class="badge text-bg-secondary" th:text="${item.type}"></span></td>
+              <td><span class="badge text-bg-success" th:text="${item.status}"></span></td>
+              <td th:text="${item.warrantyUntil ?: '—'}"></td>
             </tr>
           </tbody>
         </table>

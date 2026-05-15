@@ -76,6 +76,10 @@ public class LicenseKeyAttributeConverter implements AttributeConverter<String, 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
             return new String(cipher.doFinal(ciphertext));
+        } catch (IllegalArgumentException e) {
+            // Not Base64 — plain-text value (e.g. seed data), return as-is
+            log.debug("License key is not encrypted (plain text), returning as-is");
+            return encrypted;
         } catch (Exception e) {
             throw new IllegalStateException("Помилка дешифрування ліцензійного ключа", e);
         }

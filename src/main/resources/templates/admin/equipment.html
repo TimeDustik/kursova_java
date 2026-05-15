@@ -70,24 +70,24 @@
             <tr th:if="${page.totalElements == 0}">
               <td colspan="9" class="text-center text-muted">Немає записів</td>
             </tr>
-            <tr th:each="eq : ${page.content}">
-              <td><code th:text="${eq.inventoryNumber}"></code></td>
-              <td th:text="${eq.name}"></td>
-              <td><span class="badge text-bg-secondary" th:text="${eq.type}"></span></td>
-              <td th:text="${(eq.manufacturer ?: '') + ' ' + (eq.model ?: '')}"></td>
-              <td th:text="${eq.serialNumber ?: '—'}"></td>
+            <tr th:each="item : ${page.content}">
+              <td><code th:text="${item.inventoryNumber}"></code></td>
+              <td th:text="${item.name}"></td>
+              <td><span class="badge text-bg-secondary" th:text="${item.type}"></span></td>
+              <td th:text="${(item.manufacturer ?: '') + ' ' + (item.model ?: '')}"></td>
+              <td th:text="${item.serialNumber ?: '—'}"></td>
               <td>
                 <span class="badge"
-                      th:classappend="${eq.status.name() == 'ASSIGNED'} ? 'text-bg-success' :
-                                      (${eq.status.name() == 'IN_STOCK'} ? 'text-bg-secondary' :
+                      th:classappend="${item.status.name() == 'ASSIGNED'} ? 'text-bg-success' :
+                                      (${item.status.name() == 'IN_STOCK'} ? 'text-bg-secondary' :
                                       'text-bg-danger')"
-                      th:text="${eq.status}"></span>
+                      th:text="${item.status}"></span>
               </td>
-              <td th:text="${eq.warrantyUntil ?: '—'}"></td>
-              <td th:text="${eq.price != null ? eq.price + ' ₴' : '—'}"></td>
+              <td th:text="${item.warrantyUntil ?: '—'}"></td>
+              <td th:text="${item.price != null ? item.price + ' ₴' : '—'}"></td>
               <sec:authorize access="hasAnyRole('ADMIN','TEAM_LEAD')">
                 <td>
-                  <form th:action="@{/admin/equipment/{id}/delete(id=${eq.id})}" method="post"
+                  <form th:action="@{/admin/equipment/{id}/delete(id=${item.id})}" method="post"
                         onsubmit="return confirm('Видалити?')">
                     <button type="submit" class="btn btn-sm btn-outline-danger py-0">
                       <i class="bi bi-trash"></i>
